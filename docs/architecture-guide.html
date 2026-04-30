@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Backend Architecture Guide — Student API</title>
+<style>
+  /* ── Reset & Base ──────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    color: #1a1a2e;
+    background: #f0f2f5;
+    line-height: 1.65;
+  }
+
+  /* ── Page wrapper (A4 simulation) ─────────────────── */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 10mm auto;
+    padding: 18mm 20mm 15mm 20mm;
+    background: #ffffff;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    position: relative;
+    page-break-after: always;
+  }
+
+  /* ── Print rules ───────────────────────────────────── */
+  @media print {
+    body { background: white; }
+    .page {
+      margin: 0;
+      box-shadow: none;
+      page-break-after: always;
+      width: 100%;
+      padding: 15mm 18mm 12mm 18mm;
+    }
+    .no-print { display: none; }
+  }
+
+  /* ── Header stripe on every page ──────────────────── */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #16213e;
+    padding-bottom: 8px;
+    margin-bottom: 18px;
+  }
+  .page-header .logo-text {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0f3460;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .page-header .author-tag {
+    font-size: 10px;
+    color: #e94560;
+    font-weight: 600;
+  }
+
+  /* ── Footer on every page ──────────────────────────── */
+  .page-footer {
+    position: absolute;
+    bottom: 10mm;
+    left: 20mm;
+    right: 20mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 6px;
+    font-size: 10px;
+    color: #888;
+  }
+  .page-footer .author { color: #0f3460; font-weight: 700; }
+
+  /* ── Cover Page ────────────────────────────────────── */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 250mm;
+    text-align: center;
+  }
+  .cover .badge {
+    background: linear-gradient(135deg, #0f3460, #16213e);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .cover h1 {
+    font-size: 32px;
+    font-weight: 800;
+    color: #16213e;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .cover h2 {
+    font-size: 16px;
+    color: #0f3460;
+    font-weight: 400;
+    margin-bottom: 30px;
+  }
+  .cover .divider {
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #e94560, #0f3460);
+    border-radius: 2px;
+    margin: 20px auto;
+  }
+  .cover .tech-stack {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 20px 0;
+  }
+  .cover .tech-pill {
+    background: #f0f2f5;
+    border: 1px solid #d0d5dd;
+    color: #0f3460;
+    padding: 5px 14px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .cover .author-block {
+    margin-top: 40px;
+    padding: 20px 40px;
+    background: linear-gradient(135deg, #16213e, #0f3460);
+    border-radius: 12px;
+    color: white;
+  }
+  .cover .author-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .cover .author-role { font-size: 12px; color: #a0b4c8; }
+  .cover .cover-date { margin-top: 20px; font-size: 11px; color: #888; }
+
+  /* ── Typography ────────────────────────────────────── */
+  h2.section-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #16213e;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e94560;
+  }
+  h3.sub-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f3460;
+    margin: 18px 0 8px;
+  }
+  h4.label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e94560;
+    margin: 14px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  p { margin-bottom: 8px; }
+
+  /* ── TOC ────────────────────────────────────────────── */
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px dotted #ddd;
+    font-size: 12px;
+  }
+  .toc-item:last-child { border-bottom: none; }
+  .toc-num { color: #e94560; font-weight: 700; margin-right: 10px; width: 20px; }
+  .toc-name { flex: 1; color: #16213e; font-weight: 500; }
+  .toc-pg { color: #888; font-size: 11px; }
+  .toc-section { font-size: 11px; color: #0f3460; font-weight: 700; margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── Highlight boxes ────────────────────────────────── */
+  .info-box {
+    background: #e8f4fd;
+    border-left: 4px solid #0f3460;
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    margin: 10px 0;
+    font-size: 12px;
+  }
+  .warning-box {
+    background: #fff3cd;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    margin: 10px 0;
+    font-size: 12px;
+  }
+  .success-box {
+    background: #d1fae5;
+    border-left: 4px solid #10b981;
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    margin: 10px 0;
+    font-size: 12px;
+  }
+
+  /* ── Folder tree ────────────────────────────────────── */
+  .folder-tree {
+    font-family: 'Courier New', monospace;
+    font-size: 11.5px;
+    background: #16213e;
+    color: #e0e0e0;
+    padding: 16px 20px;
+    border-radius: 8px;
+    line-height: 1.9;
+    margin: 10px 0;
+  }
+  .folder-tree .dir  { color: #61dafb; font-weight: 700; }
+  .folder-tree .file { color: #98c379; }
+  .folder-tree .note { color: #abb2bf; font-size: 10.5px; }
+
+  /* ── Code blocks ────────────────────────────────────── */
+  .code-block {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    background: #1e2533;
+    color: #abb2bf;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin: 10px 0;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .code-block .kw  { color: #c678dd; }
+  .code-block .str { color: #98c379; }
+  .code-block .fn  { color: #61afef; }
+  .code-block .cm  { color: #5c6370; font-style: italic; }
+  .code-block .ty  { color: #e5c07b; }
+  .code-block .num { color: #d19a66; }
+
+  /* ── Schema / DB Table ──────────────────────────────── */
+  .schema-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 11.5px;
+  }
+  .schema-table thead tr {
+    background: linear-gradient(135deg, #16213e, #0f3460);
+    color: white;
+  }
+  .schema-table th {
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  .schema-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e8ecf0;
+  }
+  .schema-table tr:nth-child(even) td { background: #f8f9fb; }
+  .schema-table tr:hover td { background: #eef2ff; }
+  .badge-pk  { background: #fef3c7; color: #92400e; padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+  .badge-fk  { background: #dbeafe; color: #1e40af; padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+  .badge-req { background: #fee2e2; color: #991b1b; padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+  .badge-opt { background: #f0fdf4; color: #166534; padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+  .badge-comp{ background: #ede9fe; color: #4c1d95; padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+  .badge-auto{ background: #f0f9ff; color: #0369a1; padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+
+  /* ── Step guide ─────────────────────────────────────── */
+  .step-container { margin: 10px 0; }
+  .step {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+  }
+  .step-num {
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(135deg, #e94560, #c73652);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-content h4 { font-size: 12px; font-weight: 700; color: #16213e; margin-bottom: 3px; }
+  .step-content p  { font-size: 11.5px; color: #444; margin: 0; }
+  .step-content .file-path {
+    font-family: 'Courier New', monospace;
+    background: #f0f2f5;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #e94560;
+    font-weight: 600;
+  }
+
+  /* ── API Table ──────────────────────────────────────── */
+  .api-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin: 10px 0; }
+  .api-table th { background: #16213e; color: white; padding: 8px 10px; text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .api-table td { padding: 7px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+  .api-table tr:nth-child(even) td { background: #f8f9fb; }
+  .method {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: monospace;
+  }
+  .GET    { background: #d1fae5; color: #065f46; }
+  .POST   { background: #dbeafe; color: #1e40af; }
+  .PATCH  { background: #fef3c7; color: #92400e; }
+  .DELETE { background: #fee2e2; color: #991b1b; }
+  .endpoint { font-family: 'Courier New', monospace; font-size: 11px; color: #0f3460; font-weight: 600; }
+
+  /* ── Layer diagram ──────────────────────────────────── */
+  .layer-diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 14px 0;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .layer-row {
+    display: flex;
+    align-items: stretch;
+  }
+  .layer-label {
+    width: 110px;
+    padding: 10px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    color: white;
+    flex-shrink: 0;
+  }
+  .layer-body {
+    flex: 1;
+    padding: 10px 14px;
+    font-size: 11.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .layer-arrow {
+    text-align: center;
+    font-size: 18px;
+    color: #aaa;
+    padding: 2px 0;
+    background: #f8f8f8;
+  }
+  .l1 .layer-label { background: #e94560; }
+  .l1 .layer-body  { background: #fef0f3; border: 1px solid #fbc4d0; border-left: none; }
+  .l2 .layer-label { background: #f59e0b; }
+  .l2 .layer-body  { background: #fffbeb; border: 1px solid #fde68a; border-left: none; }
+  .l3 .layer-label { background: #0f3460; }
+  .l3 .layer-body  { background: #eff6ff; border: 1px solid #bfdbfe; border-left: none; }
+  .l4 .layer-label { background: #10b981; }
+  .l4 .layer-body  { background: #ecfdf5; border: 1px solid #a7f3d0; border-left: none; }
+  .l5 .layer-label { background: #6366f1; }
+  .l5 .layer-body  { background: #eef2ff; border: 1px solid #c7d2fe; border-left: none; }
+  .chip {
+    background: rgba(0,0,0,0.06);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ── Concept cards ──────────────────────────────────── */
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0; }
+  .concept-card {
+    border: 1px solid #e0e4ea;
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: white;
+  }
+  .concept-card .card-icon { font-size: 20px; margin-bottom: 6px; }
+  .concept-card .card-title { font-size: 12px; font-weight: 700; color: #16213e; margin-bottom: 4px; }
+  .concept-card .card-desc { font-size: 11px; color: #555; }
+  .concept-card .card-rule {
+    margin-top: 6px;
+    font-size: 10.5px;
+    color: #0f3460;
+    background: #f0f4ff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-style: italic;
+  }
+
+  /* ── Print button ───────────────────────────────────── */
+  .print-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #0f3460, #16213e);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+    z-index: 999;
+  }
+  .print-btn:hover { background: linear-gradient(135deg, #e94560, #c73652); }
+
+  /* ── Relation diagram ──────────────────────────────────*/
+  .relation-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin: 14px 0;
+    flex-wrap: wrap;
+  }
+  .rel-table {
+    border: 2px solid #0f3460;
+    border-radius: 8px;
+    overflow: hidden;
+    min-width: 130px;
+  }
+  .rel-table .rel-head {
+    background: #0f3460;
+    color: white;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .rel-table .rel-field {
+    padding: 4px 12px;
+    font-size: 11px;
+    border-bottom: 1px solid #e0e4ea;
+    font-family: monospace;
+  }
+  .rel-table .rel-field:last-child { border-bottom: none; }
+  .rel-table .rel-field.pk { color: #e94560; font-weight: 700; }
+  .rel-table .rel-field.fk { color: #0f3460; font-weight: 700; }
+  .rel-arrow { font-size: 22px; color: #0f3460; font-weight: 700; }
+  .rel-label { font-size: 10px; text-align: center; color: #888; margin-top: 2px; }
+
+  /* ── Flow box ───────────────────────────────────────── */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .flow-arr { color: #aaa; font-size: 16px; }
+  .fb-red   { background: #fef0f3; border-color: #fbc4d0; color: #c73652; }
+  .fb-blue  { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+  .fb-green { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+  .fb-purple{ background: #eef2ff; border-color: #c7d2fe; color: #4c1d95; }
+  .fb-amber { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+  .fb-gray  { background: #f3f4f6; border-color: #d1d5db; color: #374151; }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ Save as PDF</button>
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 1 — COVER -->
+<div class="page">
+  <div class="cover">
+    <div class="badge">Backend Architecture Documentation</div>
+    <h1>Student API</h1>
+    <h2>Node.js · Express.js · TypeScript · MongoDB</h2>
+    <div class="divider"></div>
+    <p style="color:#555; max-width:340px; font-size:12px;">
+      A complete reference guide covering folder structure, database schemas,
+      clean architecture layers, and step-by-step guides for building new APIs.
+    </p>
+
+    <div class="tech-stack">
+      <span class="tech-pill">Node.js</span>
+      <span class="tech-pill">Express.js</span>
+      <span class="tech-pill">TypeScript</span>
+      <span class="tech-pill">MongoDB Atlas</span>
+      <span class="tech-pill">Mongoose</span>
+      <span class="tech-pill">Swagger UI</span>
+      <span class="tech-pill">Joi Validation</span>
+      <span class="tech-pill">Clean Architecture</span>
+    </div>
+
+    <div class="author-block">
+      <div class="author-name">Nikhil Mahato</div>
+      <div class="author-role">Software Development Engineer 1</div>
+    </div>
+    <div class="cover-date">Document Version 1.0 &nbsp;·&nbsp; 2026</div>
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 1</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 2 — TOC -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">Table of Contents</h2>
+
+  <div class="toc-section">📐 Architecture</div>
+  <div class="toc-item"><span class="toc-num">1.</span><span class="toc-name">Project Overview &amp; Architecture Philosophy</span><span class="toc-pg">Page 3</span></div>
+  <div class="toc-item"><span class="toc-num">2.</span><span class="toc-name">Full Folder Structure with Descriptions</span><span class="toc-pg">Page 4</span></div>
+
+  <div class="toc-section">📁 Layer-by-Layer Deep Dive</div>
+  <div class="toc-item"><span class="toc-num">3.</span><span class="toc-name">Core Layer — Abstracts, Entities, DTOs</span><span class="toc-pg">Page 5</span></div>
+  <div class="toc-item"><span class="toc-num">4.</span><span class="toc-name">Database Schema Designs (Student &amp; Marks)</span><span class="toc-pg">Page 6</span></div>
+  <div class="toc-item"><span class="toc-num">5.</span><span class="toc-name">Frameworks/Mongo Layer — Models &amp; Generic Repository</span><span class="toc-pg">Page 7</span></div>
+  <div class="toc-item"><span class="toc-num">6.</span><span class="toc-name">Use-Cases Layer — Business Logic</span><span class="toc-pg">Page 8</span></div>
+  <div class="toc-item"><span class="toc-num">7.</span><span class="toc-name">Controllers, Routes &amp; Folder-Based Swagger</span><span class="toc-pg">Page 9</span></div>
+
+  <div class="toc-section">🚀 How-To Guides</div>
+  <div class="toc-item"><span class="toc-num">8.</span><span class="toc-name">Step-by-Step: Creating a New CRUD Module</span><span class="toc-pg">Page 10</span></div>
+  <div class="toc-item"><span class="toc-num">9.</span><span class="toc-name">Step-by-Step: Adding a MongoDB $lookup (Join)</span><span class="toc-pg">Page 11</span></div>
+
+  <div class="toc-section">📋 Reference</div>
+  <div class="toc-item"><span class="toc-num">10.</span><span class="toc-name">All API Endpoints Reference</span><span class="toc-pg">Page 12</span></div>
+  <div class="toc-item"><span class="toc-num">11.</span><span class="toc-name">Key Concepts for Learners</span><span class="toc-pg">Page 13</span></div>
+  <div class="toc-item"><span class="toc-num">12.</span><span class="toc-name">Quick Cheat Sheet — Files to Create for New API</span><span class="toc-pg">Page 14</span></div>
+
+  <div class="info-box" style="margin-top:24px;">
+    <strong>How to use this document:</strong> Each section is self-contained.
+    If you want to add a new resource like <code>Course</code>,
+    jump directly to <strong>Page 10</strong> (Step-by-Step CRUD) and follow the 7 steps.
+    For joining tables, see <strong>Page 11</strong> (Lookup guide).
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 2</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 3 — OVERVIEW -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">1. Project Overview &amp; Architecture Philosophy</h2>
+
+  <p>This project implements <strong>Clean Architecture</strong> (also called Hexagonal Architecture or Onion Architecture) in a Node.js + Express.js + TypeScript environment — mirroring the same patterns used in enterprise NestJS applications.</p>
+
+  <div class="info-box">
+    <strong>The Core Rule:</strong> Each layer only depends on the layer below it. Business logic (Use-Cases) never imports from Express or Mongoose — it only talks through interfaces.
+  </div>
+
+  <h3 class="sub-title">Architecture Layer Flow</h3>
+  <div class="layer-diagram">
+    <div class="layer-row l1">
+      <div class="layer-label">HTTP Layer</div>
+      <div class="layer-body">
+        <span class="chip">Routes</span>
+        <span class="chip">Controllers</span>
+        <span style="font-size:11px; color:#c73652;">— Handles req/res only. No business logic. Validates input with DTOs.</span>
+      </div>
+    </div>
+    <div class="layer-arrow">↓</div>
+    <div class="layer-row l2">
+      <div class="layer-label">Use-Cases</div>
+      <div class="layer-body">
+        <span class="chip">StudentUseCase</span>
+        <span class="chip">MarksUseCase</span>
+        <span style="font-size:11px; color:#92400e;">— Business rules. Calls IDataServices. No Express/Mongoose imports.</span>
+      </div>
+    </div>
+    <div class="layer-arrow">↓</div>
+    <div class="layer-row l3">
+      <div class="layer-label">Core/Abstracts</div>
+      <div class="layer-body">
+        <span class="chip">IGenericRepository</span>
+        <span class="chip">IDataServices</span>
+        <span style="font-size:11px; color:#1e40af;">— TypeScript interfaces. Framework-agnostic. The contract layer.</span>
+      </div>
+    </div>
+    <div class="layer-arrow">↓</div>
+    <div class="layer-row l4">
+      <div class="layer-label">Framework</div>
+      <div class="layer-body">
+        <span class="chip">MongoGenericRepository</span>
+        <span class="chip">MongoDataServices</span>
+        <span style="font-size:11px; color:#065f46;">— Concrete Mongoose implementation. The only place with DB code.</span>
+      </div>
+    </div>
+    <div class="layer-arrow">↓</div>
+    <div class="layer-row l5">
+      <div class="layer-label">Database</div>
+      <div class="layer-body">
+        <span class="chip">MongoDB Atlas</span>
+        <span class="chip">Mongoose Models</span>
+        <span style="font-size:11px; color:#4c1d95;">— Student collection, Marks collection.</span>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">Why this architecture?</h3>
+  <div class="card-grid">
+    <div class="concept-card">
+      <div class="card-icon">🔄</div>
+      <div class="card-title">Swap Database Easily</div>
+      <div class="card-desc">If you want to change from MongoDB to PostgreSQL, only the <code>frameworks/</code> folder changes. Use-cases and controllers stay 100% unchanged.</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-icon">🧪</div>
+      <div class="card-title">Testable Business Logic</div>
+      <div class="card-desc">Use-cases have no Mongoose or Express dependencies, so you can test business rules by passing a mock <code>IDataServices</code> object.</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-icon">📦</div>
+      <div class="card-title">Module Independence</div>
+      <div class="card-desc">Each resource (Student, Marks, Course) has its own isolated folder. Adding or removing one resource doesn't affect others.</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-icon">🚀</div>
+      <div class="card-title">Same as NestJS Pattern</div>
+      <div class="card-desc">This mirrors NestJS's Service + Repository + Module pattern, so migrating to NestJS later requires minimal refactoring.</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 3</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 4 — FOLDER STRUCTURE -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">2. Full Folder Structure with Descriptions</h2>
+
+  <div class="folder-tree">
+<span class="dir">Backend/</span>
+├── <span class="file">server.ts</span>                    <span class="note">← App entry point. Connects DB, starts HTTP server.</span>
+├── <span class="file">tsconfig.json</span>               <span class="note">← TypeScript compiler configuration.</span>
+├── <span class="file">nodemon.json</span>                <span class="note">← Auto-restart config for development (watches .ts files).</span>
+├── <span class="file">package.json</span>               <span class="note">← Dependencies, npm scripts (dev/build/start).</span>
+├── <span class="file">.env</span>                        <span class="note">← Environment variables (MONGO_URI, PORT). Never commit!</span>
+│
+├── <span class="dir">docs/</span>
+│   └── <span class="file">architecture-guide.html</span>   <span class="note">← This document. Open in browser → Print → Save as PDF.</span>
+│
+└── <span class="dir">src/</span>
+    ├── <span class="file">app.ts</span>                   <span class="note">← Express app setup. Registers middleware, routes, swagger.</span>
+    │
+    ├── <span class="dir">config/</span>
+    │   ├── <span class="file">database.ts</span>          <span class="note">← MongoDB Atlas connection. Exits process if connection fails.</span>
+    │   └── <span class="file">swagger.ts</span>           <span class="note">← Merges swagger specs from all route modules. Central spec.</span>
+    │
+    ├── <span class="dir">core/</span>                        <span class="note">← ⭐ Framework-agnostic layer. Pure TypeScript interfaces.</span>
+    │   ├── <span class="dir">abstracts/</span>
+    │   │   ├── <span class="file">generic-repository.abstract.ts</span>  <span class="note">← IGenericRepository interface (CRUD contract)</span>
+    │   │   └── <span class="file">data-service.abstract.ts</span>        <span class="note">← IDataServices interface (all repos in one)</span>
+    │   ├── <span class="dir">entities/</span>
+    │   │   ├── <span class="file">student.entity.ts</span>    <span class="note">← IStudent + IStudentDocument interfaces</span>
+    │   │   └── <span class="file">marks.entity.ts</span>      <span class="note">← IMarks + IMarksDocument interfaces</span>
+    │   └── <span class="dir">dtos/</span>
+    │       ├── <span class="dir">student/</span>
+    │       │   ├── <span class="file">create-student.dto.ts</span> <span class="note">← Joi schema for POST /students body</span>
+    │       │   └── <span class="file">update-student.dto.ts</span> <span class="note">← Joi schema for PATCH /students/:id body</span>
+    │       └── <span class="dir">marks/</span>
+    │           ├── <span class="file">create-marks.dto.ts</span>   <span class="note">← Joi schema for POST /marks body</span>
+    │           └── <span class="file">update-marks.dto.ts</span>   <span class="note">← Joi schema for PATCH /marks/:id body</span>
+    │
+    ├── <span class="dir">frameworks/mongo/</span>            <span class="note">← ⭐ Only Mongoose code lives here. DB implementation.</span>
+    │   ├── <span class="dir">model/</span>
+    │   │   ├── <span class="file">student.model.ts</span>     <span class="note">← Mongoose schema + model for Student collection</span>
+    │   │   └── <span class="file">marks.model.ts</span>       <span class="note">← Mongoose schema + model for Marks collection</span>
+    │   ├── <span class="file">mongo-generic-repository.ts</span>  <span class="note">← Implements IGenericRepository using Mongoose</span>
+    │   └── <span class="file">mongo-data-services.service.ts</span> <span class="note">← Wires all models to repositories</span>
+    │
+    ├── <span class="dir">use-cases/</span>                  <span class="note">← ⭐ Business logic. No Express or Mongoose here.</span>
+    │   ├── <span class="dir">student/</span>
+    │   │   └── <span class="file">student.use-case.ts</span>  <span class="note">← getAllStudents, createStudent, updateStudent, etc.</span>
+    │   └── <span class="dir">marks/</span>
+    │       └── <span class="file">marks.use-case.ts</span>    <span class="note">← getAllMarks (with $lookup), createMarks, etc.</span>
+    │
+    ├── <span class="dir">controllers/</span>                <span class="note">← Thin HTTP handlers. Validate → call use-case → respond.</span>
+    │   ├── <span class="file">student.controller.ts</span>
+    │   └── <span class="file">marks.controller.ts</span>
+    │
+    ├── <span class="dir">routes/</span>                     <span class="note">← ⭐ Each module has its own folder with routes + swagger.</span>
+    │   ├── <span class="dir">student/</span>
+    │   │   ├── <span class="file">student.routes.ts</span>    <span class="note">← Express router for /students endpoints</span>
+    │   │   └── <span class="file">student.swagger.ts</span>   <span class="note">← Swagger paths + schemas for Student module</span>
+    │   ├── <span class="dir">marks/</span>
+    │   │   ├── <span class="file">marks.routes.ts</span>      <span class="note">← Express router for /marks endpoints</span>
+    │   │   └── <span class="file">marks.swagger.ts</span>     <span class="note">← Swagger paths + schemas for Marks module</span>
+    │   └── <span class="file">index.ts</span>                <span class="note">← Mounts all routers at /api/v1</span>
+    │
+    ├── <span class="dir">middlewares/</span>
+    │   └── <span class="file">error.middleware.ts</span>      <span class="note">← Global error handler (Mongoose, CastError, 11000...)</span>
+    └── <span class="dir">utils/</span>
+        ├── <span class="file">response.util.ts</span>         <span class="note">← sendSuccess() / sendError() — standard JSON envelope</span>
+        └── <span class="file">async-handler.util.ts</span>    <span class="note">← Wraps async handlers to forward errors to middleware</span>
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 4</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 5 — CORE LAYER -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">3. Core Layer — Abstracts, Entities &amp; DTOs</h2>
+
+  <div class="info-box">
+    <strong>Location:</strong> <code>src/core/</code> — This is the most important folder.
+    It contains <strong>zero</strong> Mongoose or Express code. Pure TypeScript interfaces that define the contract.
+  </div>
+
+  <h3 class="sub-title">3.1 Abstracts — The Contracts</h3>
+  <p>These interfaces define <em>what</em> can be done, not <em>how</em>. The concrete Mongoose implementation lives in <code>frameworks/mongo/</code>.</p>
+
+  <table class="schema-table">
+    <thead><tr><th>Interface</th><th>File</th><th>Purpose</th><th>Methods</th></tr></thead>
+    <tbody>
+      <tr><td><strong>IGenericRepository&lt;T&gt;</strong></td><td><code>generic-repository.abstract.ts</code></td><td>CRUD contract for any collection. Generic type T = the document type.</td><td>getAll, get, find, findOne, findWithPagination, count, create, update, updateMany, delete, findUnique, aggregate</td></tr>
+      <tr><td><strong>IDataServices</strong></td><td><code>data-service.abstract.ts</code></td><td>Single entry point to all repositories. Inject this into use-cases.</td><td>students, marks (typed repos)</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-title">3.2 Entities — Domain Models</h3>
+  <p>Entities define the shape of your data in pure TypeScript — no schema, no annotations. Think of them as "what a Student looks like in our system".</p>
+
+  <div class="code-block">
+<span class="cm">// src/core/entities/student.entity.ts</span>
+<span class="kw">export interface</span> <span class="ty">IStudent</span> {
+  name:      <span class="ty">string</span>;
+  email:     <span class="ty">string</span>;   <span class="cm">// unique across all students</span>
+  age:       <span class="ty">number</span>;
+  grade:     <span class="ty">string</span>;
+  phone?:    <span class="ty">string</span> | <span class="ty">null</span>;
+  address?:  <span class="ty">string</span> | <span class="ty">null</span>;
+  is_active: <span class="ty">boolean</span>;  <span class="cm">// soft-delete flag</span>
+}
+<span class="kw">export interface</span> <span class="ty">IStudentDocument</span> <span class="kw">extends</span> <span class="ty">IStudent</span>, <span class="ty">Document</span> {}  <span class="cm">// adds _id, createdAt, updatedAt</span>
+  </div>
+
+  <h3 class="sub-title">3.3 DTOs — Data Transfer &amp; Validation</h3>
+  <p>DTOs (Data Transfer Objects) validate and type the incoming HTTP request body using <strong>Joi</strong> before it reaches the use-case or database.</p>
+
+  <table class="schema-table">
+    <thead><tr><th>DTO File</th><th>Used In</th><th>What It Validates</th></tr></thead>
+    <tbody>
+      <tr><td><code>create-student.dto.ts</code></td><td>POST /students</td><td>name (required), email (required, valid email), age (5–100), grade (required). phone/address optional.</td></tr>
+      <tr><td><code>update-student.dto.ts</code></td><td>PATCH /students/:id</td><td>Same fields but ALL optional. Minimum 1 field must be present.</td></tr>
+      <tr><td><code>create-marks.dto.ts</code></td><td>POST /marks</td><td>student_id (24-char hex ObjectId), hindi/english/math/science/sst each 0–100. All required.</td></tr>
+      <tr><td><code>update-marks.dto.ts</code></td><td>PATCH /marks/:id</td><td>Any subject marks (0–100), all optional. Min 1 required.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warning-box">
+    <strong>Important:</strong> Never pass raw <code>req.body</code> directly to the use-case or database.
+    Always validate through a DTO schema first. This protects against injection attacks and bad data.
+  </div>
+
+  <div class="flow-row">
+    <div class="flow-box fb-red">req.body</div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box fb-amber">Joi validate (DTO)</div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box fb-blue">Use-Case</div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box fb-green">Database</div>
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 5</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 6 — SCHEMAS -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">4. Database Schema Designs</h2>
+
+  <p>MongoDB collections are defined as Mongoose schemas in <code>src/frameworks/mongo/model/</code>.
+  These are equivalent to "tables" in SQL. Below is the schema design for each collection.</p>
+
+  <h3 class="sub-title">4.1 Students Collection &nbsp;<code>→ src/frameworks/mongo/model/student.model.ts</code></h3>
+  <table class="schema-table">
+    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Constraint</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>_id</strong></td><td>ObjectId</td><td><span class="badge-pk">PK</span></td><td>auto-generated</td><td>—</td><td>MongoDB primary key. Auto-created.</td></tr>
+      <tr><td>name</td><td>String</td><td><span class="badge-req">REQUIRED</span></td><td>trim</td><td>—</td><td>Full name of the student.</td></tr>
+      <tr><td>email</td><td>String</td><td><span class="badge-req">REQUIRED</span></td><td>unique, lowercase, trim</td><td>—</td><td>Unique B-tree index auto-created by MongoDB.</td></tr>
+      <tr><td>age</td><td>Number</td><td><span class="badge-req">REQUIRED</span></td><td>min: 5</td><td>—</td><td>Validated in DTO (Joi) and schema (Mongoose).</td></tr>
+      <tr><td>grade</td><td>String</td><td><span class="badge-req">REQUIRED</span></td><td>trim</td><td>—</td><td>Class grade, e.g., "A", "10th".</td></tr>
+      <tr><td>phone</td><td>String</td><td><span class="badge-opt">OPTIONAL</span></td><td>trim</td><td>null</td><td>Contact number.</td></tr>
+      <tr><td>address</td><td>String</td><td><span class="badge-opt">OPTIONAL</span></td><td>trim</td><td>null</td><td>Home address.</td></tr>
+      <tr><td>is_active</td><td>Boolean</td><td><span class="badge-opt">OPTIONAL</span></td><td>—</td><td>true</td><td>Soft-delete flag. Set false instead of deleting.</td></tr>
+      <tr><td>createdAt</td><td>Date</td><td><span class="badge-auto">AUTO</span></td><td>timestamps:true</td><td>Now</td><td>Auto-managed by Mongoose.</td></tr>
+      <tr><td>updatedAt</td><td>Date</td><td><span class="badge-auto">AUTO</span></td><td>timestamps:true</td><td>Now</td><td>Auto-updated on every save.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-title">4.2 Marks Collection &nbsp;<code>→ src/frameworks/mongo/model/marks.model.ts</code></h3>
+  <table class="schema-table">
+    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Constraint</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>_id</strong></td><td>ObjectId</td><td><span class="badge-pk">PK</span></td><td>auto-generated</td><td>—</td><td>Primary key.</td></tr>
+      <tr><td>student_id</td><td>ObjectId</td><td><span class="badge-fk">FK</span></td><td>ref:'Student', unique, index</td><td>—</td><td>Foreign key → students._id. One-to-one with Student.</td></tr>
+      <tr><td>hindi</td><td>Number</td><td><span class="badge-req">REQUIRED</span></td><td>min:0, max:100</td><td>—</td><td>Hindi marks out of 100.</td></tr>
+      <tr><td>english</td><td>Number</td><td><span class="badge-req">REQUIRED</span></td><td>min:0, max:100</td><td>—</td><td>English marks out of 100.</td></tr>
+      <tr><td>math</td><td>Number</td><td><span class="badge-req">REQUIRED</span></td><td>min:0, max:100</td><td>—</td><td>Mathematics marks out of 100.</td></tr>
+      <tr><td>science</td><td>Number</td><td><span class="badge-req">REQUIRED</span></td><td>min:0, max:100</td><td>—</td><td>Science marks out of 100.</td></tr>
+      <tr><td>sst</td><td>Number</td><td><span class="badge-req">REQUIRED</span></td><td>min:0, max:100</td><td>—</td><td>Social Science &amp; Technology out of 100.</td></tr>
+      <tr><td>total</td><td>Number</td><td><span class="badge-comp">COMPUTED</span></td><td>max:500</td><td>—</td><td>Auto-calculated in use-case: hindi+english+math+science+sst.</td></tr>
+      <tr><td>percentage</td><td>Number</td><td><span class="badge-comp">COMPUTED</span></td><td>0–100</td><td>—</td><td>Auto-calculated: (total/500)×100, rounded to 2 decimals.</td></tr>
+      <tr><td>result_grade</td><td>String</td><td><span class="badge-comp">COMPUTED</span></td><td>A+/A/B/C/D/F</td><td>—</td><td>Auto-assigned based on percentage. See grade scale below.</td></tr>
+      <tr><td>createdAt</td><td>Date</td><td><span class="badge-auto">AUTO</span></td><td>timestamps:true</td><td>—</td><td>Auto-managed by Mongoose.</td></tr>
+      <tr><td>updatedAt</td><td>Date</td><td><span class="badge-auto">AUTO</span></td><td>timestamps:true</td><td>—</td><td>Auto-managed by Mongoose.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-title">4.3 Grade Scale &amp; Collection Relationship</h3>
+  <div style="display:flex; gap:20px; align-items:flex-start;">
+    <table class="schema-table" style="width:200px; flex-shrink:0;">
+      <thead><tr><th>Percentage</th><th>Grade</th></tr></thead>
+      <tbody>
+        <tr><td>90% – 100%</td><td><strong>A+</strong></td></tr>
+        <tr><td>80% – 89%</td><td><strong>A</strong></td></tr>
+        <tr><td>70% – 79%</td><td><strong>B</strong></td></tr>
+        <tr><td>60% – 69%</td><td><strong>C</strong></td></tr>
+        <tr><td>50% – 59%</td><td><strong>D</strong></td></tr>
+        <tr><td>0% – 49%</td><td><strong>F</strong></td></tr>
+      </tbody>
+    </table>
+    <div>
+      <div class="relation-box">
+        <div class="rel-table">
+          <div class="rel-head">students</div>
+          <div class="rel-field pk">🔑 _id (ObjectId)</div>
+          <div class="rel-field">name</div>
+          <div class="rel-field">email</div>
+          <div class="rel-field">grade</div>
+          <div class="rel-field">is_active</div>
+        </div>
+        <div>
+          <div class="rel-arrow">1 ──→</div>
+          <div class="rel-label">ONE TO ONE</div>
+        </div>
+        <div class="rel-table">
+          <div class="rel-head">marks</div>
+          <div class="rel-field pk">🔑 _id (ObjectId)</div>
+          <div class="rel-field fk">🔗 student_id (FK)</div>
+          <div class="rel-field">hindi / english</div>
+          <div class="rel-field">math / science / sst</div>
+          <div class="rel-field">total / percentage</div>
+        </div>
+      </div>
+      <div class="info-box" style="font-size:11px; margin-top:8px;">
+        <strong>One-to-One:</strong> Each student can have only ONE marks record.
+        Enforced by <code>unique: true</code> on <code>student_id</code> in the marks schema.
+        The $lookup join uses student_id → _id to bring student info into marks responses.
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 6</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 7 — FRAMEWORKS -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">5. Frameworks/Mongo Layer</h2>
+
+  <div class="info-box">
+    <strong>Location:</strong> <code>src/frameworks/mongo/</code> &nbsp;—&nbsp;
+    This is the <strong>only</strong> place in the entire project where Mongoose code exists.
+    If you need to add a database query method, it goes here.
+  </div>
+
+  <h3 class="sub-title">5.1 MongoGenericRepository — How Every DB Method Works</h3>
+  <table class="schema-table">
+    <thead><tr><th>Method</th><th>Mongoose Behind the Scenes</th><th>When to Use</th></tr></thead>
+    <tbody>
+      <tr><td><code>getAll()</code></td><td><code>Model.find().populate()</code></td><td>List all documents (no filter).</td></tr>
+      <tr><td><code>get(id)</code></td><td><code>Model.findById(id).populate()</code></td><td>Fetch one document by _id.</td></tr>
+      <tr><td><code>find(filter)</code></td><td><code>Model.find(filter)</code></td><td>Filter documents. Supports <code>$or</code>, <code>$regex</code>, etc.</td></tr>
+      <tr><td><code>findOne(filter)</code></td><td><code>Model.findOne(filter)</code></td><td>Find one document by any field (e.g., email).</td></tr>
+      <tr><td><code>findWithPagination()</code></td><td><code>Model.find().skip().limit().sort()</code></td><td>Paginated list. skip = (page-1)×limit.</td></tr>
+      <tr><td><code>count(filter)</code></td><td><code>Model.countDocuments(filter)</code></td><td>Count matching docs. Used for totalPages.</td></tr>
+      <tr><td><code>create(item)</code></td><td><code>new Model(item).save()</code></td><td>Insert a new document.</td></tr>
+      <tr><td><code>update(id, item)</code></td><td><code>Model.findByIdAndUpdate(id, item, {new:true})</code></td><td>Update and return updated doc.</td></tr>
+      <tr><td><code>updateMany(filter, update)</code></td><td><code>Model.updateMany(filter, update)</code></td><td>Bulk update multiple docs.</td></tr>
+      <tr><td><code>delete(id)</code></td><td><code>Model.findByIdAndDelete(id)</code></td><td>Hard delete a document.</td></tr>
+      <tr><td><code>findUnique(data)</code></td><td><code>Model.findOne(data)</code></td><td>Check if a document exists by unique field.</td></tr>
+      <tr><td><code>aggregate(pipeline)</code></td><td><code>Model.aggregate(pipeline)</code></td><td>Complex queries: joins, grouping, reshaping.</td></tr>
+      <tr><td><code>aggregateWithPagination()</code></td><td><code>Model.aggregate([ ...pipeline, {$facet}])</code></td><td>Paginated aggregation in ONE query using $facet.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-title">5.2 MongoDataServices — Wiring Models to Repositories</h3>
+  <p>This class implements <code>IDataServices</code>. It wires each Mongoose model to a <code>MongoGenericRepository</code> instance. Think of it as the "registry" of all collections.</p>
+
+  <div class="code-block">
+<span class="cm">// src/frameworks/mongo/mongo-data-services.service.ts</span>
+<span class="kw">class</span> <span class="ty">MongoDataServices</span> <span class="kw">implements</span> <span class="ty">IDataServices</span> {
+  students: <span class="ty">IGenericRepository</span>&lt;<span class="ty">IStudentDocument</span>&gt;;
+  marks:    <span class="ty">IGenericRepository</span>&lt;<span class="ty">IMarksDocument</span>&gt;;
+
+  <span class="fn">constructor</span>() {
+    <span class="kw">this</span>.students = <span class="kw">new</span> <span class="fn">MongoGenericRepository</span>(Student);  <span class="cm">// Student = Mongoose model</span>
+    <span class="kw">this</span>.marks    = <span class="kw">new</span> <span class="fn">MongoGenericRepository</span>(Marks);
+    <span class="cm">// To add Course: this.courses = new MongoGenericRepository(Course);</span>
+  }
+}
+  </div>
+
+  <h3 class="sub-title">5.3 Mongoose Schema — Key Options Explained</h3>
+  <div class="card-grid">
+    <div class="concept-card">
+      <div class="card-title">timestamps: true</div>
+      <div class="card-desc">Mongoose auto-adds <code>createdAt</code> and <code>updatedAt</code> to every document. You never have to set these manually.</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-title">versionKey: false</div>
+      <div class="card-desc">Removes the <code>__v</code> field that Mongoose adds by default. Cleaner API responses without this internal field.</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-title">unique: true</div>
+      <div class="card-desc">Creates a unique B-tree index in MongoDB. Duplicate inserts throw error code <code>11000</code>, caught by error middleware.</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-title">ref: 'Student'</div>
+      <div class="card-desc">Tells Mongoose which model the ObjectId refers to. Required for <code>.populate()</code> and helps IDEs/tooling understand the relationship.</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 7</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 8 — USE CASES -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">6. Use-Cases Layer — Business Logic</h2>
+
+  <div class="info-box">
+    <strong>Location:</strong> <code>src/use-cases/</code> — The brain of the app.
+    All business rules live here. No <code>import mongoose</code>, no <code>import express</code>.
+    Only <code>IDataServices</code>.
+  </div>
+
+  <h3 class="sub-title">6.1 StudentUseCase — All Methods</h3>
+  <table class="schema-table">
+    <thead><tr><th>Method</th><th>Business Rules Inside</th><th>Called By</th></tr></thead>
+    <tbody>
+      <tr><td><code>getAllStudents(query)</code></td><td>Builds dynamic filter from query params. Runs paginated OR full fetch depending on page/limit presence.</td><td>GET /students</td></tr>
+      <tr><td><code>getStudentById(id)</code></td><td>Throws <em>"Student not found"</em> if result is null (caught by error middleware → 404).</td><td>GET /students/:id</td></tr>
+      <tr><td><code>createStudent(dto)</code></td><td>Checks email duplicate via findUnique. Throws if duplicate found. Then creates.</td><td>POST /students</td></tr>
+      <tr><td><code>updateStudent(id, dto)</code></td><td>Checks student exists. If email changes, checks new email isn't taken by another student.</td><td>PATCH /students/:id</td></tr>
+      <tr><td><code>deleteStudent(id)</code></td><td>Checks student exists first. Then hard deletes.</td><td>DELETE /students/:id</td></tr>
+      <tr><td><code>deactivateStudent(id)</code></td><td>Soft delete — sets is_active: false. Student data stays in DB for audit.</td><td>Custom endpoint</td></tr>
+      <tr><td><code>getGradeSummary()</code></td><td>MongoDB $group aggregation — counts students per grade + avg age. No JS-side loop needed.</td><td>GET /students/summary/grades</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-title">6.2 MarksUseCase — Key Methods</h3>
+  <table class="schema-table">
+    <thead><tr><th>Method</th><th>Business Rules Inside</th><th>Called By</th></tr></thead>
+    <tbody>
+      <tr><td><code>getAllMarks(query)</code></td><td>Builds $lookup pipeline to join student info. Supports $facet pagination in ONE query.</td><td>GET /marks</td></tr>
+      <tr><td><code>getMarksById(id)</code></td><td>Aggregation pipeline with $match on _id + $lookup. Throws if not found.</td><td>GET /marks/:id</td></tr>
+      <tr><td><code>getMarksByStudentId(sId)</code></td><td>Aggregation with $match on student_id + $lookup. Throws if no marks for student.</td><td>GET /marks/student/:id</td></tr>
+      <tr><td><code>createMarks(dto)</code></td><td>1) Checks student exists. 2) Checks no duplicate marks for student. 3) Computes total/percentage/grade. 4) Saves.</td><td>POST /marks</td></tr>
+      <tr><td><code>updateMarks(id, dto)</code></td><td>Merges new values with existing marks (keeps old values for unchanged subjects). Recomputes total/percentage/grade.</td><td>PATCH /marks/:id</td></tr>
+      <tr><td><code>deleteMarks(id)</code></td><td>Checks marks exists. Then hard deletes.</td><td>DELETE /marks/:id</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-title">6.3 computeResult — How Grade Auto-Calculation Works</h3>
+  <div class="code-block">
+<span class="cm">// Inside marks.use-case.ts — called before every create and update</span>
+<span class="kw">private</span> <span class="fn">computeResult</span>(scores): <span class="ty">ComputedResult</span> {
+  <span class="kw">const</span> total      = scores.hindi + scores.english + scores.math + scores.science + scores.sst;
+  <span class="kw">const</span> percentage = <span class="fn">parseFloat</span>(((total / <span class="num">500</span>) * <span class="num">100</span>).<span class="fn">toFixed</span>(<span class="num">2</span>));
+
+  <span class="kw">let</span> result_grade = <span class="str">'F'</span>;
+  <span class="kw">if</span> (percentage >= <span class="num">90</span>)      result_grade = <span class="str">'A+'</span>;
+  <span class="kw">else if</span> (percentage >= <span class="num">80</span>) result_grade = <span class="str">'A'</span>;
+  <span class="kw">else if</span> (percentage >= <span class="num">70</span>) result_grade = <span class="str">'B'</span>;
+  <span class="kw">else if</span> (percentage >= <span class="num">60</span>) result_grade = <span class="str">'C'</span>;
+  <span class="kw">else if</span> (percentage >= <span class="num">50</span>) result_grade = <span class="str">'D'</span>;
+
+  <span class="kw">return</span> { total, percentage, result_grade };
+}  <span class="cm">// Result stored in DB — not computed on read (avoids recalculation every request)</span>
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 8</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 9 — CONTROLLERS & SWAGGER -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">7. Controllers, Routes &amp; Folder-Based Swagger</h2>
+
+  <h3 class="sub-title">7.1 Controllers — Thin HTTP Layer</h3>
+  <div class="info-box">
+    Controllers do <strong>exactly 3 things</strong> and nothing more:
+    (1) Validate the request body using a DTO, (2) Call the use-case method, (3) Send the response.
+    Business logic must never be written in a controller.
+  </div>
+
+  <div class="code-block">
+<span class="cm">// Controller pattern — same structure for every endpoint</span>
+<span class="kw">export const</span> <span class="fn">createStudent</span> = <span class="fn">asyncHandler</span>(<span class="kw">async</span> (req, res) => {
+  <span class="cm">// Step 1: Validate input using DTO (Joi)</span>
+  <span class="kw">const</span> { error, value } = <span class="fn">createStudentSchema</span>.<span class="fn">validate</span>(req.body, { abortEarly: <span class="kw">false</span> });
+  <span class="kw">if</span> (error) <span class="kw">return</span> <span class="fn">sendError</span>(res, <span class="str">'Validation failed'</span>, <span class="num">400</span>, error.details.map(d => d.message));
+
+  <span class="cm">// Step 2: Call use-case (all business logic lives here)</span>
+  <span class="kw">const</span> student = <span class="kw">await</span> studentUseCase.<span class="fn">createStudent</span>(value);
+
+  <span class="cm">// Step 3: Send response using standard envelope</span>
+  <span class="fn">sendSuccess</span>(res, <span class="str">'Student created successfully'</span>, student, <span class="num">201</span>);
+});
+  </div>
+
+  <h3 class="sub-title">7.2 Folder-Based Swagger — How It Works</h3>
+  <p>Traditional approach puts all Swagger in one file → 2000+ lines for 10 resources. This project uses <strong>module-owned swagger files</strong>.</p>
+
+  <div class="flow-row">
+    <div class="flow-box fb-blue">student.swagger.ts<br><small style="font-size:9px;">studentPaths, studentSchemas</small></div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box fb-purple">marks.swagger.ts<br><small style="font-size:9px;">marksPaths, marksSchemas</small></div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box fb-green">config/swagger.ts<br><small style="font-size:9px;">...spreads all together</small></div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box fb-amber">Swagger UI<br><small style="font-size:9px;">/api-docs</small></div>
+  </div>
+
+  <div class="code-block">
+<span class="cm">// config/swagger.ts — just spreads all module swagger specs together</span>
+<span class="kw">import</span> { studentPaths, studentSchemas } <span class="kw">from</span> <span class="str">'../routes/student/student.swagger'</span>;
+<span class="kw">import</span> { marksPaths,   marksSchemas }   <span class="kw">from</span> <span class="str">'../routes/marks/marks.swagger'</span>;
+
+<span class="kw">export const</span> swaggerSpec = {
+  paths:      { ...studentPaths,   ...marksPaths   },  <span class="cm">// All module paths merged here</span>
+  components: { schemas: { ...studentSchemas, ...marksSchemas } },
+};
+<span class="cm">// Adding Course: just add ...coursePaths and ...courseSchemas — zero changes elsewhere</span>
+  </div>
+
+  <h3 class="sub-title">7.3 asyncHandler — Why Every Controller Uses It</h3>
+  <div class="code-block">
+<span class="cm">// Without asyncHandler: if use-case throws, Express hangs the request silently</span>
+router.get(<span class="str">'/'</span>, <span class="kw">async</span> (req, res) => { <span class="kw">await</span> useCase.<span class="fn">doSomething</span>(); }); <span class="cm">// ❌ WRONG</span>
+
+<span class="cm">// With asyncHandler: promise rejection → next(err) → error middleware → JSON error response</span>
+router.get(<span class="str">'/'</span>, <span class="fn">asyncHandler</span>(<span class="kw">async</span> (req, res) => { <span class="kw">await</span> useCase.<span class="fn">doSomething</span>(); })); <span class="cm">// ✅ CORRECT</span>
+  </div>
+
+  <h3 class="sub-title">7.4 Standard Response Envelope</h3>
+  <p>Every API response — success or error — follows the same JSON structure:</p>
+  <div class="code-block">
+<span class="cm">// Success</span>  { <span class="str">"success"</span>: <span class="kw">true</span>,  <span class="str">"message"</span>: <span class="str">"Student created"</span>, <span class="str">"data"</span>: { ... } }
+<span class="cm">// Error</span>    { <span class="str">"success"</span>: <span class="kw">false</span>, <span class="str">"message"</span>: <span class="str">"Validation failed"</span>, <span class="str">"errors"</span>: [<span class="str">"Name is required"</span>] }
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 9</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 10 — NEW CRUD GUIDE -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">8. Step-by-Step: Creating a New CRUD Module</h2>
+
+  <div class="success-box">
+    <strong>Example:</strong> Adding a <strong>Course</strong> resource.
+    Follow these 7 steps in order. Each step maps to one folder in the architecture.
+  </div>
+
+  <div class="step-container">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>Create the Entity (Domain Model)</h4>
+        <p>Create <span class="file-path">src/core/entities/course.entity.ts</span></p>
+        <p>Define a TypeScript interface <code>ICourse</code> with all fields (name, code, teacher_id, etc.). Also export <code>ICourseDocument extends ICourse, Document</code> for Mongoose typing.</p>
+        <p style="margin-top:4px; font-size:11px; color:#888;">Rule: No Mongoose types here. Plain TypeScript interfaces only.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>Create the DTOs (Input Validation)</h4>
+        <p>Create <span class="file-path">src/core/dtos/course/create-course.dto.ts</span> and <span class="file-path">update-course.dto.ts</span></p>
+        <p>Write Joi schemas for the POST body (required fields) and PATCH body (all optional, min:1). Export both the Joi schema and the TypeScript interface.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>Create the Mongoose Model</h4>
+        <p>Create <span class="file-path">src/frameworks/mongo/model/course.model.ts</span></p>
+        <p>Define a <code>new Schema&lt;ICourseDocument&gt;({...})</code> with the fields, types, required flags, and constraints. Export <code>const Course = model('Course', courseSchema)</code>.</p>
+        <p style="margin-top:4px; font-size:11px; color:#888;">Add <code>timestamps: true, versionKey: false</code> as schema options always.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h4>Register the Repository in MongoDataServices</h4>
+        <p>Open <span class="file-path">src/frameworks/mongo/mongo-data-services.service.ts</span></p>
+        <p>Add: <code>this.courses = new MongoGenericRepository&lt;ICourseDocument&gt;(Course);</code></p>
+        <p>Also add <code>courses: IGenericRepository&lt;ICourseDocument&gt;;</code> to <span class="file-path">src/core/abstracts/data-service.abstract.ts</span>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h4>Create the Use-Case (Business Logic)</h4>
+        <p>Create <span class="file-path">src/use-cases/course/course.use-case.ts</span></p>
+        <p>Write <code>getAllCourses()</code>, <code>getCourseById()</code>, <code>createCourse()</code>, <code>updateCourse()</code>, <code>deleteCourse()</code>. Only use <code>this.dataServices.courses.*</code>. Throw named errors for not-found cases.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-content">
+        <h4>Create the Controller</h4>
+        <p>Create <span class="file-path">src/controllers/course.controller.ts</span></p>
+        <p>One exported function per endpoint. Each: validates with DTO → calls use-case → sends response. Always wrap with <code>asyncHandler()</code>. Use <code>sendSuccess()</code> and <code>sendError()</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-content">
+        <h4>Create Routes + Swagger File + Mount</h4>
+        <p>Create folder <span class="file-path">src/routes/course/</span> with three files:</p>
+        <p>① <code>course.routes.ts</code> — Express Router. Map GET/POST/PATCH/DELETE to controller functions.</p>
+        <p>② <code>course.swagger.ts</code> — Export <code>coursePaths</code> and <code>courseSchemas</code> objects.</p>
+        <p>③ In <span class="file-path">src/routes/index.ts</span> add: <code>router.use('/courses', courseRoutes);</code></p>
+        <p>④ In <span class="file-path">src/config/swagger.ts</span> add: <code>...coursePaths</code> and <code>...courseSchemas</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <strong>Never skip the DTO step (Step 2).</strong> Raw req.body should never reach the database or use-case.
+    Joi validation at the controller level is the first line of defence against bad or malicious data.
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 10</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 11 — LOOKUP GUIDE -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">9. Step-by-Step: Adding a MongoDB $lookup (Join)</h2>
+
+  <div class="info-box">
+    <strong>$lookup</strong> is MongoDB's equivalent of SQL <code>LEFT JOIN</code>.
+    It fetches matching documents from another collection and attaches them to each document.
+    In this project, the marks module uses $lookup to attach student info to every marks record.
+  </div>
+
+  <h3 class="sub-title">How $lookup Works (Annotated)</h3>
+  <div class="code-block">
+<span class="cm">// Inside a use-case method — build the aggregation pipeline</span>
+<span class="kw">const</span> pipeline = [
+  <span class="cm">// STEP A: Filter documents first (do this BEFORE lookup for performance)</span>
+  { <span class="str">$match</span>: { is_active: <span class="kw">true</span> } },
+
+  <span class="cm">// STEP B: $lookup — JOIN another collection</span>
+  {
+    <span class="str">$lookup</span>: {
+      from:         <span class="str">'students'</span>,   <span class="cm">// Target collection name (MongoDB name, lowercase+plural)</span>
+      localField:   <span class="str">'student_id'</span>, <span class="cm">// Field in THIS collection (the FK)</span>
+      foreignField: <span class="str">'_id'</span>,        <span class="cm">// Field in TARGET collection (usually the PK)</span>
+      as:           <span class="str">'student'</span>,    <span class="cm">// Name of the output array attached to each doc</span>
+    },
+    <span class="cm">// Result: each document now has student: [{ _id, name, email, ... }]</span>
+  },
+
+  <span class="cm">// STEP C: $unwind — flatten the array [ {student} ] → {student}</span>
+  {
+    <span class="str">$unwind</span>: {
+      path:                       <span class="str">'$student'</span>,
+      preserveNullAndEmptyArrays: <span class="kw">true</span>,  <span class="cm">// Keep doc even if no student match (LEFT JOIN)</span>
+    },
+    <span class="cm">// Result: student is now a plain object, not an array</span>
+  },
+
+  <span class="cm">// STEP D: $project — shape the final output (SELECT which fields)</span>
+  {
+    <span class="str">$project</span>: {
+      _id: <span class="num">1</span>, hindi: <span class="num">1</span>, english: <span class="num">1</span>, math: <span class="num">1</span>, total: <span class="num">1</span>, percentage: <span class="num">1</span>,
+      student: {                    <span class="cm">// Only expose selected student fields</span>
+        _id:   <span class="str">'$student._id'</span>,
+        name:  <span class="str">'$student.name'</span>,
+        email: <span class="str">'$student.email'</span>,
+      },
+    },
+  },
+];
+
+<span class="kw">return</span> <span class="kw">this</span>.dataServices.marks.<span class="fn">aggregate</span>(pipeline);
+  </div>
+
+  <h3 class="sub-title">Where to Write Lookup Code</h3>
+  <div class="step-container">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>Write the aggregation pipeline inside the Use-Case</h4>
+        <p>Open <span class="file-path">src/use-cases/[module]/[module].use-case.ts</span> and build a private method like <code>private buildWithStudentPipeline(match?)</code> that returns the pipeline array.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>Call aggregate() from IDataServices</h4>
+        <p>Call <code>this.dataServices.marks.aggregate(pipeline)</code> — this runs the full $lookup pipeline against MongoDB.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>For paginated lookup — use $facet</h4>
+        <p>Add a <code>$facet</code> stage at the end of the pipeline to get data + totalCount in ONE query. See <code>getAllMarks()</code> in marks.use-case.ts as the reference.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">Common $lookup Patterns</h3>
+  <table class="schema-table">
+    <thead><tr><th>Pattern</th><th>from</th><th>localField</th><th>foreignField</th><th>Use Case</th></tr></thead>
+    <tbody>
+      <tr><td>Marks → Student</td><td>students</td><td>student_id</td><td>_id</td><td>Show marks with student name/email</td></tr>
+      <tr><td>Enrollment → Course</td><td>courses</td><td>course_id</td><td>_id</td><td>Show enrollment with course details</td></tr>
+      <tr><td>User → Role</td><td>roles</td><td>role_id</td><td>_id</td><td>Show user with role name/permissions</td></tr>
+      <tr><td>Order → Product</td><td>products</td><td>product_id</td><td>_id</td><td>Show order with product name/price</td></tr>
+      <tr><td>Book → Author</td><td>authors</td><td>author_id</td><td>_id</td><td>Show book with author bio</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warning-box">
+    <strong>Collection naming:</strong> MongoDB collection names are lowercase + plural.
+    Mongoose converts <code>model('Student', ...)</code> → collection name <code>students</code>.
+    Always use the collection name (not the model name) in the <code>from</code> field of $lookup.
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 11</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 12 — API REFERENCE -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">10. All API Endpoints Reference</h2>
+
+  <p>Base URL: <code>http://localhost:3000/api/v1</code> &nbsp;·&nbsp; Swagger UI: <code>http://localhost:3000/api-docs</code></p>
+
+  <h3 class="sub-title">Students</h3>
+  <table class="api-table">
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Request Body / Query</th><th>Response</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="method GET">GET</span></td>
+        <td><span class="endpoint">/students</span></td>
+        <td>List all students with filters &amp; pagination</td>
+        <td><code>?page=1&limit=10&search=john&grade=A&is_active=true</code></td>
+        <td>200 — Paginated list</td>
+      </tr>
+      <tr>
+        <td><span class="method GET">GET</span></td>
+        <td><span class="endpoint">/students/summary/grades</span></td>
+        <td>Grade summary (count + avg age per grade). Uses MongoDB $group aggregation.</td>
+        <td>—</td>
+        <td>200 — Array of { _id, count, avgAge }</td>
+      </tr>
+      <tr>
+        <td><span class="method GET">GET</span></td>
+        <td><span class="endpoint">/students/:id</span></td>
+        <td>Get single student by MongoDB ObjectId</td>
+        <td>—</td>
+        <td>200 — Student | 404 Not Found | 400 Invalid ID</td>
+      </tr>
+      <tr>
+        <td><span class="method POST">POST</span></td>
+        <td><span class="endpoint">/students</span></td>
+        <td>Create new student. Checks email uniqueness.</td>
+        <td><code>{ name, email, age, grade, phone?, address? }</code></td>
+        <td>201 Created | 400 Validation | 409 Duplicate email</td>
+      </tr>
+      <tr>
+        <td><span class="method PATCH">PATCH</span></td>
+        <td><span class="endpoint">/students/:id</span></td>
+        <td>Partial update. Send only changed fields.</td>
+        <td><code>{ name?, email?, age?, grade?, phone?, address?, is_active? }</code></td>
+        <td>200 Updated | 404 Not Found | 409 Email taken</td>
+      </tr>
+      <tr>
+        <td><span class="method DELETE">DELETE</span></td>
+        <td><span class="endpoint">/students/:id</span></td>
+        <td>Hard delete student from database</td>
+        <td>—</td>
+        <td>200 Deleted | 404 Not Found</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-title" style="margin-top:16px;">Marks (with $lookup to students collection)</h3>
+  <table class="api-table">
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Request Body / Query</th><th>Response</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="method GET">GET</span></td>
+        <td><span class="endpoint">/marks</span></td>
+        <td>All marks with student info (via $lookup). Supports pagination &amp; student_id filter.</td>
+        <td><code>?page=1&limit=10&student_id=...</code></td>
+        <td>200 — Marks with nested student object</td>
+      </tr>
+      <tr>
+        <td><span class="method GET">GET</span></td>
+        <td><span class="endpoint">/marks/student/:studentId</span></td>
+        <td>Get marks for a specific student (by student ObjectId) with student info joined.</td>
+        <td>—</td>
+        <td>200 — Single marks record | 404 Not found</td>
+      </tr>
+      <tr>
+        <td><span class="method GET">GET</span></td>
+        <td><span class="endpoint">/marks/:id</span></td>
+        <td>Get marks record by its own _id with student info.</td>
+        <td>—</td>
+        <td>200 — Marks record | 404 Not found</td>
+      </tr>
+      <tr>
+        <td><span class="method POST">POST</span></td>
+        <td><span class="endpoint">/marks</span></td>
+        <td>Create marks. Validates student exists. No duplicate per student. Auto-computes total, percentage, grade.</td>
+        <td><code>{ student_id, hindi, english, math, science, sst }</code> (all 0–100)</td>
+        <td>201 Created | 404 Student not found | 409 Already exists</td>
+      </tr>
+      <tr>
+        <td><span class="method PATCH">PATCH</span></td>
+        <td><span class="endpoint">/marks/:id</span></td>
+        <td>Update marks. Send only changed subjects. total/percentage/grade auto-recomputed.</td>
+        <td><code>{ hindi?, english?, math?, science?, sst? }</code></td>
+        <td>200 Updated | 404 Not Found</td>
+      </tr>
+      <tr>
+        <td><span class="method DELETE">DELETE</span></td>
+        <td><span class="endpoint">/marks/:id</span></td>
+        <td>Delete marks record permanently.</td>
+        <td>—</td>
+        <td>200 Deleted | 404 Not Found</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-title" style="margin-top:14px;">Utility Endpoints</h3>
+  <table class="api-table">
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method GET">GET</span></td><td><span class="endpoint">/health</span></td><td>Health check. Returns <code>{ status: "ok", timestamp }</code>. Used by load balancers.</td></tr>
+      <tr><td><span class="method GET">GET</span></td><td><span class="endpoint">/api-docs</span></td><td>Swagger UI — interactive documentation for all endpoints.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 12</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 13 — CONCEPTS -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">11. Key Concepts for Learners</h2>
+
+  <div class="card-grid">
+    <div class="concept-card">
+      <div class="card-icon">🗄️</div>
+      <div class="card-title">Repository Pattern</div>
+      <div class="card-desc">Abstracts all database operations behind an interface (<code>IGenericRepository</code>). Business logic never imports Mongoose. It only calls methods like <code>find()</code>, <code>create()</code> on the interface.</div>
+      <div class="card-rule">Rule: The only place with Model.findById() is in MongoGenericRepository.</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-icon">⚙️</div>
+      <div class="card-title">Use-Case Pattern</div>
+      <div class="card-desc">Each feature has a use-case class that contains all the business rules for that domain. Controllers call use-cases. Use-cases call repositories. No layer is skipped.</div>
+      <div class="card-rule">Rule: Never put if/else business logic in a controller.</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-icon">📋</div>
+      <div class="card-title">DTO Pattern</div>
+      <div class="card-desc">Data Transfer Objects define the exact shape and validation rules for incoming API data. Joi schemas enforce types, required fields, and ranges at the HTTP boundary before data enters the system.</div>
+      <div class="card-rule">Rule: Validate req.body before calling any use-case method.</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-icon">💉</div>
+      <div class="card-title">Dependency Injection</div>
+      <div class="card-desc">Use-cases receive <code>IDataServices</code> through the constructor. They don't create it themselves. This makes swapping implementations (real DB vs mock) trivial without changing the use-case code.</div>
+      <div class="card-rule">constructor(private readonly dataServices: IDataServices)</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-icon">🔗</div>
+      <div class="card-title">MongoDB $lookup (JOIN)</div>
+      <div class="card-desc">Fetches related documents from another collection and attaches them. Used in the marks module to embed student info into every marks response without making two separate API calls from the client.</div>
+      <div class="card-rule">$lookup → $unwind → $project in the aggregation pipeline.</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-icon">📊</div>
+      <div class="card-title">$facet Pagination</div>
+      <div class="card-desc">$facet runs multiple sub-pipelines in parallel on the same dataset. Used to get paginated data AND total count in a single MongoDB query — twice as efficient as two separate queries.</div>
+      <div class="card-rule">$facet: { data: [$skip,$limit], totalCount: [$count] }</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-icon">🛡️</div>
+      <div class="card-title">Soft Delete</div>
+      <div class="card-desc">Instead of removing a document from the database permanently, set <code>is_active: false</code>. The data stays for audit/history purposes. Filter <code>is_active: true</code> on list queries to hide inactive records.</div>
+      <div class="card-rule">update(id, { is_active: false }) instead of delete(id)</div>
+    </div>
+    <div class="concept-card">
+      <div class="card-icon">🌐</div>
+      <div class="card-title">Microservice Readiness</div>
+      <div class="card-desc">Each resource module (student/, marks/) is self-contained with its own routes, swagger, use-case, and DTOs. Extracting any one of them into a separate microservice only requires moving the folder + wiring a new data source.</div>
+      <div class="card-rule">Each module folder = potential microservice boundary.</div>
+    </div>
+  </div>
+
+  <h3 class="sub-title" style="margin-top:12px;">Error Handling Flow</h3>
+  <div class="flow-row">
+    <div class="flow-box fb-red">Async Error<br><small>thrown in use-case</small></div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box fb-amber">asyncHandler<br><small>catches rejection</small></div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box fb-blue">next(err)<br><small>forwarded to Express</small></div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box fb-purple">error.middleware<br><small>classifies error</small></div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box fb-gray">JSON response<br><small>{ success: false }</small></div>
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 13</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ PAGE 14 — CHEAT SHEET -->
+<div class="page">
+  <div class="page-header">
+    <span class="logo-text">Student API — Architecture Guide</span>
+    <span class="author-tag">Made by Nikhil Mahato (SDE-1)</span>
+  </div>
+
+  <h2 class="section-title">12. Quick Cheat Sheet — Files to Create for a New API</h2>
+
+  <div class="success-box">
+    When adding a new resource (example: <strong>Teacher</strong>), create these files in exactly this order.
+    Each file corresponds to one architecture layer.
+  </div>
+
+  <table class="schema-table">
+    <thead><tr><th>#</th><th>File to Create</th><th>Layer</th><th>What to Write</th><th>Time Est.</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>1</strong></td>
+        <td><code>core/entities/teacher.entity.ts</code></td>
+        <td>Core</td>
+        <td>ITeacher interface + ITeacherDocument extends ITeacher, Document</td>
+        <td>5 min</td>
+      </tr>
+      <tr>
+        <td><strong>2</strong></td>
+        <td><code>core/dtos/teacher/create-teacher.dto.ts</code></td>
+        <td>Core</td>
+        <td>Joi object with required fields. Export interface + schema.</td>
+        <td>5 min</td>
+      </tr>
+      <tr>
+        <td><strong>3</strong></td>
+        <td><code>core/dtos/teacher/update-teacher.dto.ts</code></td>
+        <td>Core</td>
+        <td>Same fields but all .optional(). Add .min(1) on the object.</td>
+        <td>3 min</td>
+      </tr>
+      <tr>
+        <td><strong>4</strong></td>
+        <td><code>frameworks/mongo/model/teacher.model.ts</code></td>
+        <td>Framework</td>
+        <td>new Schema&lt;ITeacherDocument&gt;. Add timestamps:true, versionKey:false. Export model.</td>
+        <td>8 min</td>
+      </tr>
+      <tr>
+        <td><strong>5</strong></td>
+        <td><code>core/abstracts/data-service.abstract.ts</code></td>
+        <td>Core</td>
+        <td>ADD line: <code>teachers: IGenericRepository&lt;ITeacherDocument&gt;;</code></td>
+        <td>1 min</td>
+      </tr>
+      <tr>
+        <td><strong>6</strong></td>
+        <td><code>frameworks/mongo/mongo-data-services.service.ts</code></td>
+        <td>Framework</td>
+        <td>ADD in constructor: <code>this.teachers = new MongoGenericRepository(Teacher);</code></td>
+        <td>2 min</td>
+      </tr>
+      <tr>
+        <td><strong>7</strong></td>
+        <td><code>use-cases/teacher/teacher.use-case.ts</code></td>
+        <td>Use-Cases</td>
+        <td>Class with getAll, getById, create, update, delete methods. Use this.dataServices.teachers only.</td>
+        <td>15 min</td>
+      </tr>
+      <tr>
+        <td><strong>8</strong></td>
+        <td><code>controllers/teacher.controller.ts</code></td>
+        <td>Controllers</td>
+        <td>One export per endpoint. Validate DTO → call use-case → sendSuccess. Wrap all in asyncHandler.</td>
+        <td>10 min</td>
+      </tr>
+      <tr>
+        <td><strong>9</strong></td>
+        <td><code>routes/teacher/teacher.routes.ts</code></td>
+        <td>Routes</td>
+        <td>Express Router. Map GET/POST/PATCH/DELETE to controller functions.</td>
+        <td>5 min</td>
+      </tr>
+      <tr>
+        <td><strong>10</strong></td>
+        <td><code>routes/teacher/teacher.swagger.ts</code></td>
+        <td>Routes/Swagger</td>
+        <td>Export teacherPaths (API endpoints) and teacherSchemas (request/response shapes).</td>
+        <td>10 min</td>
+      </tr>
+      <tr>
+        <td><strong>11</strong></td>
+        <td><code>routes/index.ts</code></td>
+        <td>Routes</td>
+        <td>ADD: <code>router.use('/teachers', teacherRoutes);</code></td>
+        <td>1 min</td>
+      </tr>
+      <tr>
+        <td><strong>12</strong></td>
+        <td><code>config/swagger.ts</code></td>
+        <td>Config</td>
+        <td>ADD: <code>...teacherPaths</code> and <code>...teacherSchemas</code> in the spread.</td>
+        <td>2 min</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box" style="margin-top:16px;">
+    <strong>Total estimate:</strong> ~67 minutes for a full CRUD module with Swagger documentation.
+    Files 1–3 never touch the database. Files 4–6 are pure copy-paste-adapt from existing models.
+    Files 7–12 contain the actual unique logic for your resource.
+  </div>
+
+  <div style="display:flex; gap:12px; margin-top:14px;">
+    <div class="info-box" style="flex:1; margin:0;">
+      <strong>🚀 Commands to run</strong><br>
+      <code>npm run dev</code> — start with hot reload<br>
+      <code>npm run build</code> — compile TS to JS<br>
+      <code>npm start</code> — run compiled build
+    </div>
+    <div class="success-box" style="flex:1; margin:0;">
+      <strong>✅ Verification</strong><br>
+      <code>npx tsc --noEmit</code> — zero TS errors<br>
+      Visit <code>/api-docs</code> — new routes appear<br>
+      Visit <code>/health</code> — server running
+    </div>
+    <div class="warning-box" style="flex:1; margin:0;">
+      <strong>⚠️ Never Do</strong><br>
+      Import Mongoose in use-cases<br>
+      Import Express in use-cases<br>
+      Put business logic in controllers
+    </div>
+  </div>
+
+  <div style="margin-top: 24px; padding: 14px 20px; background: linear-gradient(135deg, #16213e, #0f3460); border-radius: 10px; color: white; text-align: center;">
+    <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Made by Nikhil Mahato</div>
+    <div style="font-size: 11px; color: #a0b4c8;">Software Development Engineer 1 &nbsp;·&nbsp; Node.js + Express.js + TypeScript + MongoDB</div>
+    <div style="font-size: 10px; color: #708090; margin-top: 4px;">Clean Architecture · Repository Pattern · Use-Case Pattern · Folder-Based Swagger</div>
+  </div>
+
+  <div class="page-footer">
+    <span>Student API — Backend Architecture Guide</span>
+    <span class="author">Made by Nikhil Mahato (Software Development Engineer 1)</span>
+    <span>Page 14</span>
+  </div>
+</div>
+
+</body>
+</html>
